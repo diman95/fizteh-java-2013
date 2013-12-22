@@ -229,6 +229,9 @@ public class FileMap implements Table, AutoCloseable {
         if (randomFile.isDirectory()) {
             throw new ErrorFileMap("data file can't be a directory");
         }
+        int intDir = FileMapUtils.getCode(nameDir);
+        int intFile = FileMapUtils.getCode(randomFile.getName());
+
         RandomAccessFile dbFile = null;
         Exception error = null;
         try {
@@ -239,6 +242,61 @@ public class FileMap implements Table, AutoCloseable {
             }
             if (dbFile.length() == 0) {
                 throw new ErrorFileMap("file is clear");
+            }
+            dbFile.seek(0);
+
+            byte[] arrayByte;
+            Vector<Byte> vectorByte = new Vector<Byte>();
+            long separator = -1;
+
+            while (dbFile.getFilePointer() != dbFile.length()) {
+                byte currentByte = dbFile.readByte();
+                if (currentByte == '\0') {
+                    int point1 = dbFile.readInt();
+
+//                    if (separator == -1) {
+//                        separator = point1;
+//                    }
+                    long currentPoint = dbFile.getFilePointer();
+//
+//                    while (dbFile.getFilePointer() != separator) {
+//                        if (dbFile.readByte() == '\0') {
+//                            break;
+//                        }
+//                    }
+
+//                    int point2;
+//                    if (dbFile.getFilePointer() == separator) {
+//                        point2 = (int) dbFile.length();
+//                    } else {
+//                        point2 = dbFile.readInt();
+//                    }
+
+                    dbFile.seek(point1);
+
+                    //arrayByte = new byte[point2 - point1];
+                    //dbFile.readFully(arrayByte);
+                    //String value = new String(arrayByte, StandardCharsets.UTF_8);
+
+
+                    arrayByte = new byte[vectorByte.size()];
+                    for (int i = 0; i < vectorByte.size(); ++i) {
+                        arrayByte[i] = vectorByte.elementAt(i).byteValue();
+                    }
+                    String key = new String(arrayByte, StandardCharsets.UTF_8);
+
+                    if (tableData.getHashDir(key) != intDir || tableData.getHashFile(key) != intFile) {
+                        throw new ErrorFileMap("wrong key in the file");
+                    }
+
+                    //dbMap.put(key, parent.deserialize(this, value));
+                    tableSize += 1;
+
+                    vectorByte.clear();
+                    dbFile.seek(currentPoint);
+                } else {
+                    vectorByte.add(currentByte);
+                }
             }
         } catch (Exception e) {
             error = e;
