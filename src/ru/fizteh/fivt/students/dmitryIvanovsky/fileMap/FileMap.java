@@ -42,6 +42,7 @@ public class FileMap implements Table, AutoCloseable {
     volatile boolean tableDrop = false;
     volatile boolean isTableClose = false;
     volatile int sizeDataInFiles;
+    boolean isCorrectData = false;
     FileMapProvider parent;
     List<Class<?>> columnType = new ArrayList<Class<?>>();
 
@@ -213,7 +214,10 @@ public class FileMap implements Table, AutoCloseable {
                 }
 
                 try {
-                    checkTableFile(randomFile, nameDir.getName());
+                    if (!isCorrectData) {
+                        checkTableFile(randomFile, nameDir.getName());
+                    }
+                    isCorrectData = true;
                 } catch (Exception e) {
                     e.addSuppressed(new ErrorFileMap("Error in file " + randomFile.getAbsolutePath()));
                     throw e;
@@ -245,33 +249,26 @@ public class FileMap implements Table, AutoCloseable {
             }
             dbFile.seek(0);
 
+            byte[] arrayByte;
+            Vector<Byte> vectorByte = new Vector<Byte>();
+            boolean isFirstKey = true;
             long shiftLast = dbFile.length();
 
             while (dbFile.getFilePointer() != shiftLast) {
                 byte currentByte = dbFile.readByte();
-                dbFile.read();
                 if (currentByte == '\0') {
-                    shiftLast = dbFile.readInt();
-                    break;
-                }
-            }
-
-            byte[] arrayByte;
-            Vector<Byte> vectorByte = new Vector<Byte>();
-
-            byte[] input = new byte[(int) shiftLast];
-            dbFile.seek(0);
-            dbFile.read(input, 0, (int) shiftLast);
-
-            for (int i = 0; i < shiftLast; ++i) {
-                byte currentByte = input[i];
-                dbFile.read();
-                if (currentByte == '\0') {
-                    arrayByte = new byte[vectorByte.size()];
-                    for (int j = 0; j < vectorByte.size(); ++j) {
-                        arrayByte[j] = vectorByte.elementAt(j).byteValue();
+                    int point1 = dbFile.readInt();
+                    if (isFirstKey) {
+                        shiftLast = point1;
                     }
+                    isFirstKey = false;
+                    arrayByte = new byte[vectorByte.size()];
+                    for (int i = 0; i < vectorByte.size(); ++i) {
+                        arrayByte[i] = vectorByte.elementAt(i).byteValue();
+                    }
+
                     String key = new String(arrayByte, StandardCharsets.UTF_8);
+
                     if (tableData.getHashDir(key) != intDir || tableData.getHashFile(key) != intFile) {
                         throw new ErrorFileMap("wrong key in the file");
                     }
@@ -281,7 +278,6 @@ public class FileMap implements Table, AutoCloseable {
                     vectorByte.add(currentByte);
                 }
             }
-
         } catch (Exception e) {
             error = e;
             throw error;
