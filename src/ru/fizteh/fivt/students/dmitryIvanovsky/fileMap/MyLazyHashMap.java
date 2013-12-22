@@ -13,7 +13,6 @@ public class MyLazyHashMap {
     int size;
     final int numberDir = 16;
     final int numberFile = 16;
-    boolean[][] loadFile = new boolean[16][16];
     Map<String, Storeable>[][] arrayMap = new WeakHashMap[numberDir][numberFile];
     FileMapProvider provider;
     FileMap fileMap;
@@ -22,7 +21,6 @@ public class MyLazyHashMap {
         for (int i = 0; i < numberDir; ++i) {
             for (int j = 0; j < numberFile; ++j) {
                 arrayMap[i][j] = new WeakHashMap<>();
-                loadFile[i][j] = false;
             }
         }
         size = 0;
@@ -31,20 +29,9 @@ public class MyLazyHashMap {
         this.fileMap = fileMap;
     }
 
-    private boolean isFileLoad(String key) {
-        return loadFile[getHashDir(key)][getHashFile(key)];
-    }
-
-    private void loadFile(String key) throws Exception {
-        int dir = getHashDir(key);
-        int file = getHashFile(key);
-        if (!arrayMap[dir][file].containsKey(key)) {
-            loadTableFile(dir, file, key);
-            loadFile[dir][file] = true;
-        }
-    }
-
-    public void loadTableFile(int intDir, int intFile, String refKey) throws Exception {
+    public Storeable loadTableFile(String refKey) throws Exception {
+        int intDir = getHashDir(refKey);
+        int intFile = getHashFile(refKey);
         String strDir = String.valueOf(intDir) + ".dir";
         File randomFile = pathTable.resolve(strDir).resolve(String.valueOf(intFile) + ".dat").toFile();
 
@@ -113,7 +100,7 @@ public class MyLazyHashMap {
 
                     if (key.equals(refKey)) {
                         arrayMap[intDir][intFile].put(key, provider.deserialize(fileMap, value));
-                        break;
+                        return provider.deserialize(fileMap, value);
                     }
 
                     vectorByte.clear();
@@ -122,6 +109,7 @@ public class MyLazyHashMap {
                     vectorByte.add(currentByte);
                 }
             }
+            return null;
         } catch (Exception e) {
             error = e;
             throw error;
@@ -142,8 +130,12 @@ public class MyLazyHashMap {
 
     public Storeable get(String key) {
         try {
-            loadFile(key);
-            return initMap(key).get(key);
+            Storeable res = initMap(key).get(key);
+            if (res == null) {
+                return loadTableFile(key);
+            } else {
+                return res;
+            }
         } catch (FileIsNotExist e) {
             return null;
         } catch (Exception e) {
@@ -153,21 +145,16 @@ public class MyLazyHashMap {
 
     public void put(String key, Storeable value) {
         try {
-            loadFile(key);
-        } catch (FileIsNotExist e) {
-            //pass
+            initMap(key).put(key, value);
         } catch (Exception e) {
-            throw new IllegalStateException("Error with open file with key = " + key, e);
+            throw new IllegalStateException("Error with put " + key, e);
         }
-        initMap(key).put(key, value);
+
     }
 
     public void remove(String key) {
         try {
-            loadFile(key);
             initMap(key).remove(key);
-        } catch (FileIsNotExist e) {
-            //pass
         } catch (Exception e) {
             throw new IllegalStateException("Error with open file with key = " + key, e);
         }
@@ -191,10 +178,19 @@ public class MyLazyHashMap {
         return nfile;
     }
 
-    public Boolean containsKey(String key) {
+    public boolean containsKey(String key) {
         try {
-            loadFile(key);
-            return initMap(key).containsKey(key);
+            Storeable res = initMap(key).get(key);
+            if (res == null) {
+                res = loadTableFile(key);
+                if (res == null) {
+                    return false;
+                } else {
+                    return true;
+                }
+            } else {
+                return true;
+            }
         } catch (FileIsNotExist e) {
             return false;
         } catch (Exception e) {
