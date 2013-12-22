@@ -213,7 +213,7 @@ public class FileMap implements Table, AutoCloseable {
                 }
 
                 try {
-                    checkTableFile(randomFile, nameDir.getName());
+                    //checkTableFile(randomFile, nameDir.getName());
                 } catch (Exception e) {
                     e.addSuppressed(new ErrorFileMap("Error in file " + randomFile.getAbsolutePath()));
                     throw e;
