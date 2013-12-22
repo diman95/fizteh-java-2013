@@ -180,14 +180,9 @@ public class MyLazyHashMap {
 
     public boolean containsKey(String key) {
         try {
-            Storeable res = initMap(key).get(key);
-            if (res == null) {
-                res = loadTableFile(key);
-                if (res == null) {
-                    return false;
-                } else {
-                    return true;
-                }
+            Storeable st = initMap(key).get(key);
+            if (st == null) {
+                return loadTableFile(key) != null;
             } else {
                 return true;
             }
