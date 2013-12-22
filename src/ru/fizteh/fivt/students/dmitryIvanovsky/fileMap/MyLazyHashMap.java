@@ -98,7 +98,6 @@ public class MyLazyHashMap {
                         throw new ErrorFileMap("wrong key in the file");
                     }
 
-                    arrayMap[intDir][intFile].put(key, provider.deserialize(fileMap, value));
                     if (key.equals(refKey)) {
                         arrayMap[intDir][intFile].put(key, provider.deserialize(fileMap, value));
                         return provider.deserialize(fileMap, value);
