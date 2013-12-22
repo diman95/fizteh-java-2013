@@ -247,38 +247,17 @@ public class FileMap implements Table, AutoCloseable {
 
             byte[] arrayByte;
             Vector<Byte> vectorByte = new Vector<Byte>();
-            long separator = -1;
+            boolean isFirstKey = true;
+            long shiftLast = dbFile.length();
 
-            while (dbFile.getFilePointer() != dbFile.length()) {
+            while (dbFile.getFilePointer() != shiftLast) {
                 byte currentByte = dbFile.readByte();
                 if (currentByte == '\0') {
                     int point1 = dbFile.readInt();
-
-//                    if (separator == -1) {
-//                        separator = point1;
-//                    }
-                    long currentPoint = dbFile.getFilePointer();
-//
-//                    while (dbFile.getFilePointer() != separator) {
-//                        if (dbFile.readByte() == '\0') {
-//                            break;
-//                        }
-//                    }
-
-//                    int point2;
-//                    if (dbFile.getFilePointer() == separator) {
-//                        point2 = (int) dbFile.length();
-//                    } else {
-//                        point2 = dbFile.readInt();
-//                    }
-
-                    dbFile.seek(point1);
-
-                    //arrayByte = new byte[point2 - point1];
-                    //dbFile.readFully(arrayByte);
-                    //String value = new String(arrayByte, StandardCharsets.UTF_8);
-
-
+                    if (isFirstKey) {
+                        shiftLast = point1;
+                    }
+                    isFirstKey = false;
                     arrayByte = new byte[vectorByte.size()];
                     for (int i = 0; i < vectorByte.size(); ++i) {
                         arrayByte[i] = vectorByte.elementAt(i).byteValue();
@@ -288,12 +267,8 @@ public class FileMap implements Table, AutoCloseable {
                     if (tableData.getHashDir(key) != intDir || tableData.getHashFile(key) != intFile) {
                         throw new ErrorFileMap("wrong key in the file");
                     }
-
-                    //dbMap.put(key, parent.deserialize(this, value));
                     tableSize += 1;
-
                     vectorByte.clear();
-                    dbFile.seek(currentPoint);
                 } else {
                     vectorByte.add(currentByte);
                 }
